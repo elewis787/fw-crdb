@@ -1,0 +1,56 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ory-config-kratos
+data:
+  kratos: config 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ory-kratos
+spec:
+  type: ClusterIP
+  selector:
+      app: ory-kratos
+  ports:
+  - port: 80
+    name: http-ory-kratos
+    targetPort: 4433
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: ory-kratos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ory-kratos
+  template:
+    metadata:
+      labels:
+        app: ory-kratos
+    spec:
+      containers:
+      - name: ory-kratos
+        image: oryd/kratos:latest
+        imagePullPolicy: IfNotPresent
+        env: 
+        - name: DATABASE_URL
+          value: memory
+        resources:
+          limits:
+            memory: "100Mi"
+            cpu: "0.1"
+        ports:
+        - containerPort: 4433
+        volumeMounts:
+            - name: ory-config-kratos
+              mountPath: /etc/kratos/config
+      volumes:
+          - name: ory-config-kratos
+            configMap:
+              name: ory-config-kratos
+              restartPolicy: Never
